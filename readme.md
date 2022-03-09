@@ -45,3 +45,7 @@ To build locally using esy
 ```
 esy @./grpc_proxy_sidecar.opam install
 ```
+
+## Credits
+
+All credits are due to @bradleyjkemp (https://github.com/bradleyjkemp/grpc-tools). This project is just a thin wrapper over `grpc-dump`.
