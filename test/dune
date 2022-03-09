@@ -1,2 +1,0 @@
-(test
- (name grpc_proxy_sidecar))
