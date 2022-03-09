@@ -4,8 +4,6 @@ let server_port = ref 8080
 
 let destination = ref None
 
-let out_file = ref "dump.json"
-
 let proto_roots = ref None
 
 let () =
@@ -46,11 +44,28 @@ let command =
       proto_roots;
     |] )
 
+let print_exit_status =
+  Lwt.map
+    (let p str status =
+       print_endline (str ^ " (" ^ string_of_int status ^ ")")
+     in
+     function
+     | Unix.WSIGNALED s -> p "signaled" s
+     | Unix.WSTOPPED s -> p "stopped" s
+     | Unix.WEXITED s -> p "exited" s)
+
 let () =
-  let subprocess =
-    Lwt_process.pread_lines ~stderr:(`FD_copy Unix.stdout) command
+  let subprocess = Lwt_process.open_process_full command in
+  let lines = Lwt_io.read_lines subprocess#stdout in
+  let errors = Lwt_io.read_lines subprocess#stderr in
+  let sink = Lwt_stream.iter ignore lines in
+  let sink' =
+    Lwt_stream.iter
+      (fun x ->
+        Printf.eprintf "%s\n" x;
+        flush stderr)
+      errors
   in
-  let sink = Lwt_stream.iter ignore subprocess in
   let server =
     Dream.serve ~port:!server_port
     @@ Dream.logger
@@ -58,7 +73,7 @@ let () =
          [
            Dream.get "/tail" (fun _ ->
                Dream.stream ~status:`OK (fun response_stream ->
-                   let stream = Lwt_stream.clone subprocess in
+                   let stream = Lwt_stream.clone lines in
                    Lwt_stream.iter_p
                      (fun x ->
                        Lwt.bind
@@ -67,4 +82,14 @@ let () =
                      stream));
          ]
   in
-  Lwt.pick [ sink; server ] |> Lwt_main.run
+  Lwt.catch
+    (fun () ->
+      Lwt.pick
+        [
+          Lwt.bind (Lwt.both sink sink') (fun _ ->
+              print_exit_status subprocess#status);
+          server;
+        ])
+    (fun exn ->
+      Printf.eprintf "Error: %s" (Printexc.to_string exn) |> Lwt.return)
+  |> Lwt_main.run
