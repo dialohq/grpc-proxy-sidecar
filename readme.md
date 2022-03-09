@@ -4,6 +4,8 @@ Debug grpc in-transport with ease.
 
 At Dialo we've experienced hard to debug issues where we weren't sure whether it's the server or the client at fault. This proxy allows you to intercept gRPC traffic in a readable json form.
 
+> Do not use on production ⛔️. This tool was only tested as debugging aid.
+
 ## Usage example
 
 This will start the proxy on port `9090` and will forward all grpc requests to `localhost:9091` (it assumes there's the _de facto_ gRPC server running there).
