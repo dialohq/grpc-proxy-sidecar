@@ -1,0 +1,4 @@
+(executable
+ (public_name grpc_proxy_sidecar)
+ (name main)
+ (libraries grpc_proxy_sidecar dream))
